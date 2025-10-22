@@ -1,14 +1,2 @@
-http:
-  middlewares:
-    redirect-to-https:
-      redirectScheme:
-        scheme: https
-        permanent: true
-  routers:
-    http-catchall:
-      rule: HostRegexp(`{any:.+}`)
-      entryPoints:
-        - web
-      middlewares:
-        - redirect-to-https
-      service: web
+# Traefik will use Docker labels from docker-compose.yml
+# This file is kept for future dynamic config needs

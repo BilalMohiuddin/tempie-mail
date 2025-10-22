@@ -33,6 +33,11 @@ services:
       - NEXT_PUBLIC_API_BASE=https://www.tempiemail.com/api
     labels:
       - "traefik.enable=true"
+      - "traefik.http.routers.web-http.rule=Host(`www.tempiemail.com`) || Host(`tempiemail.com`)"
+      - "traefik.http.routers.web-http.entrypoints=web"
+      - "traefik.http.routers.web-http.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
       - "traefik.http.routers.web.rule=Host(`www.tempiemail.com`) || Host(`tempiemail.com`)"
       - "traefik.http.routers.web.entrypoints=websecure"
       - "traefik.http.routers.web.tls.certresolver=le"
