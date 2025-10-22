@@ -32,6 +32,11 @@ server.get('/health', async () => {
   return { status: 'ok' };
 });
 
+// Simple test endpoint
+server.get('/test', async () => {
+  return { message: 'API is working', timestamp: new Date().toISOString() };
+});
+
 // Create new email session
 server.post('/sessions', async (request, reply) => {
   try {
