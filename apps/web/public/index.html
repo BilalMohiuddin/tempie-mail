@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TempiEmail - Disposable Email Service</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-900">
+    <div class="min-h-screen">
+        <div class="max-w-6xl mx-auto p-6">
+            <h1 class="text-3xl font-bold mb-6">TempiEmail</h1>
+            
+            <!-- Email Display -->
+            <div class="bg-white border rounded-lg p-6 mb-6 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-sm text-gray-500 mb-1">Your temporary email</div>
+                        <div id="email-display" class="text-xl font-mono text-blue-600">Creating email...</div>
+                        <div id="expiry-display" class="text-xs text-gray-400 mt-1"></div>
+                    </div>
+                    <button id="generate-btn" onclick="generateNewEmail()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                        Generate new email
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Inbox -->
+                <div class="lg:col-span-1 bg-white border rounded-lg p-4 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="font-semibold text-lg">Inbox</h2>
+                        <span id="message-count" class="text-sm text-gray-500">0 messages</span>
+                    </div>
+                    
+                    <div id="inbox-content">
+                        <div class="text-center py-8 text-gray-500">
+                            <div class="text-4xl mb-2">📧</div>
+                            <p>No messages yet</p>
+                            <p class="text-sm">Share your email address to receive emails</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Message Content -->
+                <div class="lg:col-span-2 bg-white border rounded-lg p-6 shadow-sm">
+                    <div id="message-content" class="text-center py-12 text-gray-500">
+                        <div class="text-4xl mb-4">👆</div>
+                        <p class="text-lg">Select a message to view</p>
+                        <p class="text-sm">Click on any message in the inbox to read it</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSession = null;
+        let messages = [];
+
+        // Create session on page load
+        async function createSession() {
+            try {
+                const response = await fetch('/api/sessions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to create session');
+                }
+
+                const sessionData = await response.json();
+                currentSession = sessionData;
+                
+                // Update UI
+                document.getElementById('email-display').textContent = sessionData.email;
+                document.getElementById('expiry-display').textContent = 
+                    'Expires: ' + new Date(sessionData.expiresAt).toLocaleString();
+                
+                // Store in localStorage
+                localStorage.setItem('tempiemail_session', JSON.stringify(sessionData));
+                
+                // Start polling for messages
+                fetchMessages();
+                setInterval(fetchMessages, 5000);
+                
+            } catch (error) {
+                console.error('Failed to create session:', error);
+                document.getElementById('email-display').textContent = 'Error creating email';
+            }
+        }
+
+        // Fetch messages
+        async function fetchMessages() {
+            if (!currentSession) return;
+
+            try {
+                const response = await fetch(`/api/sessions/${currentSession.sessionId}/messages`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch messages');
+                }
+
+                const data = await response.json();
+                messages = data.messages;
+                updateInbox();
+            } catch (error) {
+                console.error('Failed to fetch messages:', error);
+            }
+        }
+
+        // Update inbox display
+        function updateInbox() {
+            const inboxContent = document.getElementById('inbox-content');
+            const messageCount = document.getElementById('message-count');
+            
+            messageCount.textContent = `${messages.length} messages`;
+
+            if (messages.length === 0) {
+                inboxContent.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        <div class="text-4xl mb-2">📧</div>
+                        <p>No messages yet</p>
+                        <p class="text-sm">Share your email address to receive emails</p>
+                    </div>
+                `;
+            } else {
+                inboxContent.innerHTML = messages.map(message => `
+                    <div class="p-3 border rounded cursor-pointer hover:bg-gray-50 mb-2" onclick="viewMessage('${message.id}')">
+                        <div class="font-medium text-sm truncate">${message.subject || '(No Subject)'}</div>
+                        <div class="text-xs text-gray-500 truncate">${message.from}</div>
+                        <div class="text-xs text-gray-400">${new Date(message.receivedAt).toLocaleString()}</div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // View message details
+        async function viewMessage(messageId) {
+            try {
+                const response = await fetch(`/api/messages/${messageId}`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch message details');
+                }
+
+                const message = await response.json();
+                const messageContent = document.getElementById('message-content');
+                
+                messageContent.innerHTML = `
+                    <div>
+                        <div class="border-b pb-4 mb-4">
+                            <h3 class="text-lg font-semibold">${message.subject || '(No Subject)'}</h3>
+                            <div class="text-sm text-gray-600 mt-2">
+                                <div><strong>From:</strong> ${message.from}</div>
+                                <div><strong>To:</strong> ${message.to}</div>
+                                <div><strong>Date:</strong> ${new Date(message.receivedAt).toLocaleString()}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="prose max-w-none">
+                            ${message.htmlBody ? 
+                                `<div>${message.htmlBody}</div>` : 
+                                `<pre class="whitespace-pre-wrap font-sans">${message.textBody}</pre>`
+                            }
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Failed to fetch message details:', error);
+            }
+        }
+
+        // Generate new email
+        async function generateNewEmail() {
+            if (!currentSession) return;
+
+            try {
+                const btn = document.getElementById('generate-btn');
+                btn.textContent = 'Generating...';
+                btn.disabled = true;
+
+                const response = await fetch(`/api/sessions/${currentSession.sessionId}/regenerate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to generate new email');
+                }
+
+                const newSession = await response.json();
+                currentSession = newSession;
+                
+                // Update UI
+                document.getElementById('email-display').textContent = newSession.email;
+                document.getElementById('expiry-display').textContent = 
+                    'Expires: ' + new Date(newSession.expiresAt).toLocaleString();
+                
+                // Update localStorage
+                localStorage.setItem('tempiemail_session', JSON.stringify(newSession));
+                
+                // Clear messages
+                messages = [];
+                updateInbox();
+                document.getElementById('message-content').innerHTML = `
+                    <div class="text-center py-12 text-gray-500">
+                        <div class="text-4xl mb-4">👆</div>
+                        <p class="text-lg">Select a message to view</p>
+                        <p class="text-sm">Click on any message in the inbox to read it</p>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('Failed to generate new email:', error);
+            } finally {
+                const btn = document.getElementById('generate-btn');
+                btn.textContent = 'Generate new email';
+                btn.disabled = false;
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', createSession);
+    </script>
+</body>
+</html>
