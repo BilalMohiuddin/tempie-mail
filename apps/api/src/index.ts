@@ -8,7 +8,11 @@ const server = Fastify({ logger: pino({ level: 'info' }) });
 
 // Database connection
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgres://tempiemail:tempiemail@postgres:5432/tempiemail'
+  host: 'postgres',
+  port: 5432,
+  database: 'tempiemail',
+  user: 'tempiemail',
+  password: 'tempiemail'
 });
 
 // Redis connection
