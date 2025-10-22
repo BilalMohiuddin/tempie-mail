@@ -37,7 +37,7 @@ services:
       - "traefik.http.routers.web.entrypoints=websecure"
       - "traefik.http.routers.web.tls.certresolver=le"
       - "traefik.http.services.web.loadbalancer.server.port=3000"
-      - "traefik.http.middlewares.www-redirect.redirectregex.regex=^https?://tempiemail\.com/(.*)"
+      - "traefik.http.middlewares.www-redirect.redirectregex.regex=^https?://tempiemail\\.com/(.*)"
       - "traefik.http.middlewares.www-redirect.redirectregex.replacement=https://www.tempiemail.com/$$1"
       - "traefik.http.routers.web.middlewares=www-redirect"
     depends_on:
