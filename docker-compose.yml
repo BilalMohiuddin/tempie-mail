@@ -4,8 +4,8 @@ services:
   traefik:
     image: traefik:v3.1
     command:
-      - --providers.file.directory=/etc/traefik/dynamic
-      - --providers.file.watch=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
       - --api.dashboard=true
@@ -17,7 +17,6 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./traefik/dynamic:/etc/traefik/dynamic:ro
       - traefik_letsencrypt:/letsencrypt
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
