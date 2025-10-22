@@ -11,3 +11,4 @@ http:
         - web
       middlewares:
         - redirect-to-https
+      service: web
