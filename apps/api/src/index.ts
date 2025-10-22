@@ -37,6 +37,33 @@ server.get('/test', async () => {
   return { message: 'API is working', timestamp: new Date().toISOString() };
 });
 
+// Webhook to trigger web service rebuild (for development)
+server.post('/webhook/rebuild', async (request, reply) => {
+  try {
+    // Execute rebuild command
+    const { exec } = require('child_process');
+    
+    exec('cd /opt/tempiemail && git pull origin main && docker compose up -d --build web', (error, stdout, stderr) => {
+      if (error) {
+        server.log.error(`Rebuild error: ${error}`);
+        return reply.code(500).send({ error: 'Failed to rebuild', details: error.message });
+      }
+      
+      server.log.info('Web service rebuild completed');
+      server.log.info(stdout);
+      if (stderr) server.log.warn(stderr);
+    });
+    
+    return { 
+      message: 'Web service rebuild initiated', 
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    server.log.error(error);
+    reply.code(500).send({ error: 'Failed to trigger rebuild' });
+  }
+});
+
 // Create new email session
 server.post('/sessions', async (request, reply) => {
   try {
