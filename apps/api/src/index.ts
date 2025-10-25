@@ -6,6 +6,12 @@ import { v4 as uuidv4 } from 'uuid';
 
 const server = Fastify({ logger: pino({ level: 'info' }) });
 
+// Register CORS plugin
+await server.register(require('@fastify/cors'), {
+  origin: true, // Allow all origins for development
+  credentials: true
+});
+
 // Database connection
 const pool = new Pool({
   host: 'postgres',
