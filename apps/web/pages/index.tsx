@@ -27,9 +27,35 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Create session on page load
+  // Load session from localStorage on page load, or create new one
   useEffect(() => {
-    createSession();
+    console.log('Loading session from localStorage...');
+    const savedSession = localStorage.getItem('tempiemail_session');
+    if (savedSession) {
+      try {
+        const parsedSession = JSON.parse(savedSession);
+        console.log('Found saved session:', parsedSession);
+        // Check if session is still valid (not expired)
+        if (new Date(parsedSession.expiresAt) > new Date()) {
+          console.log('Session is valid, loading...');
+          setSession(parsedSession);
+          setLoading(false);
+        } else {
+          console.log('Session expired, creating new one');
+          // Session expired, remove from localStorage and create new one
+          localStorage.removeItem('tempiemail_session');
+          createSession();
+        }
+      } catch (error) {
+        console.error('Error parsing saved session:', error);
+        localStorage.removeItem('tempiemail_session');
+        createSession();
+      }
+    } else {
+      console.log('No saved session found, creating new one');
+      // No saved session, create new one
+      createSession();
+    }
   }, []);
 
   // Poll for new messages every 5 seconds
@@ -46,7 +72,11 @@ export default function Home() {
   const createSession = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/sessions', {
+      console.log('Creating new session...');
+      // Use production API URL
+      const url = `https://www.tempiemail.com/api/sessions?t=${Date.now()}`;
+      console.log('Calling API:', url);
+      const response = await fetch(url, {
         method: 'POST',
         body: JSON.stringify({}),
         headers: {
@@ -55,18 +85,22 @@ export default function Home() {
       });
 
       if (!response.ok) {
+        console.error('Failed to create session:', response.status, response.statusText);
         throw new Error('Failed to create session');
       }
 
       const sessionData = await response.json();
+      console.log('Session created successfully:', sessionData);
       setSession(sessionData);
       
       // Store session in localStorage for persistence
       localStorage.setItem('tempiemail_session', JSON.stringify(sessionData));
+      console.log('Session saved to localStorage');
       
       // Fetch initial messages
       await fetchMessages();
     } catch (err) {
+      console.error('Error creating session:', err);
       setError(err instanceof Error ? err.message : 'Failed to create session');
     } finally {
       setLoading(false);
@@ -77,7 +111,7 @@ export default function Home() {
     if (!session) return;
 
     try {
-      const response = await fetch(`/api/sessions/${session.sessionId}/messages`);
+      const response = await fetch(`https://www.tempiemail.com/api/sessions/${session.sessionId}/messages`);
       if (!response.ok) {
         throw new Error('Failed to fetch messages');
       }
@@ -91,7 +125,7 @@ export default function Home() {
 
   const fetchMessageDetail = async (messageId: string) => {
     try {
-      const response = await fetch(`/api/messages/${messageId}`);
+      const response = await fetch(`https://www.tempiemail.com/api/messages/${messageId}`);
       if (!response.ok) {
         throw new Error('Failed to fetch message details');
       }
@@ -108,7 +142,7 @@ export default function Home() {
 
     try {
       setLoading(true);
-      const response = await fetch(`/api/sessions/${session.sessionId}/regenerate`, {
+      const response = await fetch(`https://www.tempiemail.com/api/sessions/${session.sessionId}/regenerate`, {
         method: 'POST',
         body: JSON.stringify({}),
         headers: {
