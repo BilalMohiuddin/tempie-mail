@@ -1,0 +1,81 @@
+version: "3.9"
+
+services:
+  traefik:
+    image: traefik:v3.1
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --api.dashboard=true
+      - --certificatesresolvers.le.acme.httpchallenge=true
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.le.acme.email=admin@tempiemail.com
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - traefik_letsencrypt:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+  public:
+  public:
+  private:
+      - NEXT_PUBLIC_API_BASE=https://www.tempiemail.com/api
+    networks:
+      - public
+  api:
+    build: ./apps/api
+    env_file:
+      - ./.env
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "3001:4000"
+    networks:
+      - public
+
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "8080:80"
+    depends_on:
+      - web
+      - api
+    networks:
+      - public
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=tempiemail
+      - POSTGRES_USER=tempiemail
+      - POSTGRES_PASSWORD=tempiemail
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - public
+
+  redis:
+    image: redis:7-alpine
+    networks:
+      - public
+
+  smtp:
+    ports:
+      - "25:25"
+    networks:
+      - public
+
+volumes:
+  db_data:
+  traefik_letsencrypt:
+
+networks:
+      - public
+  public:
+  private:

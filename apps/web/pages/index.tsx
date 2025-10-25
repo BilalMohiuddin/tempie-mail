@@ -48,6 +48,7 @@ export default function Home() {
       setLoading(true);
       const response = await fetch('/api/sessions', {
         method: 'POST',
+        body: JSON.stringify({}),
         headers: {
           'Content-Type': 'application/json',
         },
@@ -109,6 +110,7 @@ export default function Home() {
       setLoading(true);
       const response = await fetch(`/api/sessions/${session.sessionId}/regenerate`, {
         method: 'POST',
+        body: JSON.stringify({}),
         headers: {
           'Content-Type': 'application/json',
         },
